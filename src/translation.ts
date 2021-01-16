@@ -12,7 +12,7 @@ const translateAsync = async (url: string, text: string, from: string, to: strin
         const data = {
             target: to,
             q: text,
-            format: 'html'
+            format: 'text'
         };
         const response = await fetch(url, {
             method: 'POST',
@@ -36,7 +36,6 @@ const translateAsync = async (url: string, text: string, from: string, to: strin
 
 export class Translation {
     public toTranslate = '';
-    public translated = '';
     public apiKey = '';
 
     LANGUAGES = [
@@ -153,15 +152,13 @@ export class Translation {
     }
 
     async startTranslation() {
-        this.translated = '';
         const toTranslate = this.toTranslate
-            .replace(/\r?\n/g, '<br />')
-            .split('<br /><br />');
+            .replace(/\r?\n/g, '\n')
+            .split('\n\n');
 
-        for (let i = 0; i < toTranslate.length; i++) {
-            const res = await this.translateAsync(toTranslate[i]);
-            this.translated += '<br/><br/>' + res;
-        }
+        const promises = toTranslate.map((t) => this.translateAsync(t));
+        const results = Promise.all(promises);
+        return results;
     }
 
     private async translateAsync(block: string) {

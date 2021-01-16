@@ -5,8 +5,8 @@ import { Translation } from './translation';
 function App() {
   // states
   const [apiKey, changeApiKey ] = useState<string>("");
-  const [ translated, changeTranslated ] = useState("");
-  const [toTranslate, changeToTranslate ] = useState<string>("");
+  const [ translated, changeTranslated ] = useState<string[]>([]);
+  const [toTranslate, changeToTranslate ] = useState<string>("Welcome to unplanned message!");
 
   // handlers
   const updateToTranslate = (e: any) => {
@@ -21,8 +21,8 @@ function App() {
     const t = new Translation();
     t.apiKey = apiKey;
     t.toTranslate = toTranslate;
-    t.startTranslation().then(() => {
-      changeTranslated(t.translated);
+    t.startTranslation().then((r) => {
+      changeTranslated(r);
     });
     
   };
@@ -39,7 +39,7 @@ function App() {
         <div>Characters: { toTranslate.length }</div>
 
         <button onClick={() => startTranslation()}>Translate</button>
-        <div dangerouslySetInnerHTML={ { __html: translated } }/>
+        <div>{ translated.map((t, i) => <p key={i}>{ t } </p>) }</div>
       </div>
     </React.Fragment>
   );
