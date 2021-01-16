@@ -1,6 +1,41 @@
+
+const arrayCopy = <T>(a: T[]): T[] => a.slice();
+const first = <T>(l: T[], n: number): T[] => l.slice(0, n);
+
+// see https://flaviocopes.com/how-to-shuffle-array-javascript/
+const shuffle = <T>(l: T[]): T[] => {
+    const copy = arrayCopy(l);
+    return copy.sort(x => Math.random() -0.5);
+};
+
+const translateAsync = async (url: string, text: string, from: string, to: string) => {
+        const data = {
+            target: to,
+            q: text,
+            format: 'html'
+        };
+        const response = await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        try {
+            if (response.body === null) {
+                throw Error("No response");
+            }
+            const text = await response.body.getReader().read();
+            var r = JSON.parse(new TextDecoder('utf-8').decode(text.value));
+            var translated = r.data.translations[0].translatedText;
+            return translated;
+        } catch (e) {
+            console.error(e);
+            return 'error';
+        }
+};
+
+
+
 export class Translation {
     public toTranslate = '';
-    public selectedLanguages: string[] = [];
     public translated = '';
     public apiKey = '';
 
@@ -113,19 +148,8 @@ export class Translation {
         return 'https://translation.googleapis.com/language/translate/v2?key=' + apiKey;
     }
 
-    selectRandomLanguage(list: string[], remainingIterations: number) {
-        if (remainingIterations === 0) {
-            list.push('en');
-            return list;
-        }
-        let i = Math.floor(Math.random() * this.LANGUAGES.length);
-        let lang = this.LANGUAGES[i];
-        if (list.includes(lang)) {
-            this.selectRandomLanguage(list, remainingIterations);
-        } else {
-            list.push(lang);
-            this.selectRandomLanguage(list, --remainingIterations);
-        }
+    selectRandomLanguages(n: number): string[] {
+        return first(shuffle(this.LANGUAGES), n);
     }
 
     async startTranslation() {
@@ -135,51 +159,31 @@ export class Translation {
             .split('<br /><br />');
 
         for (let i = 0; i < toTranslate.length; i++) {
-            await this.asynchTranslate(toTranslate[i]);
+            const res = await this.translateAsync(toTranslate[i]);
+            this.translated += '<br/><br/>' + res;
         }
     }
 
-    private async asynchTranslate(block: string) {
-        this.selectedLanguages = ['de'];
-        this.selectRandomLanguage(this.selectedLanguages, 20);
-        await this.translateNext(block, 0);
+    private async translateAsync(block: string) {
+        const selectedLanguages = 
+            ['de'].concat(
+                this.selectRandomLanguages(20),
+                [ 'de' ]
+            );
+        console.log("translation sequence", selectedLanguages);
+        return this.translateNext(block, selectedLanguages);
     }
 
-    private translateNext(message: string, index: number): any {
-        if (this.selectedLanguages.length <= index + 1) {
-            this.translated += '<br /><br />' + message;
-            return;
+    private async translateNext(message: string, languages: string[]): Promise<string> {
+        if (languages.length < 2) {
+            return message;
         }
-        const langs = this.getCurrentLanguages(index);
+
+        const from = languages.shift() || "";
+        const to = languages[0];
+
         var url = this.getUrl(this.apiKey);
-        var data = {
-            target: langs[1],
-            q: message,
-            format: 'html'
-        };
-        return fetch(url, {
-            method: 'POST',
-            body: JSON.stringify(data)
-        }).then(response => {
-            try {
-                if (response.body === null) {
-                    throw Error("No response");
-                }
-                return response.body
-                    .getReader()
-                    .read()
-                    .then(text => {
-                        var r = JSON.parse(new TextDecoder('utf-8').decode(text.value));
-                        var translated = r.data.translations[0].translatedText;
-                        return this.translateNext(translated, index + 1);
-                    });
-            } catch (e) {
-                console.log(e);
-            }
-        });
-    }
-
-    getCurrentLanguages(index: number) {
-        return this.selectedLanguages.slice(index, index + 2);
+        const translatedMessage = await translateAsync(url, message, from, to);
+        return this.translateNext(translatedMessage, languages);
     }
 }
