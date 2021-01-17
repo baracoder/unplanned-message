@@ -9,27 +9,25 @@ const shuffle = <T>(l: T[]): T[] => {
 };
 
 const translateAsync = async (url: string, text: string, from: string, to: string) => {
-        const data = {
+        const data :any = {
             target: to,
             q: text,
             format: 'text'
         };
+        if (!!from) {
+            data.source = from;
+        }
         const response = await fetch(url, {
             method: 'POST',
             body: JSON.stringify(data)
         });
-        try {
-            if (response.body === null) {
-                throw Error("No response");
-            }
-            const text = await response.body.getReader().read();
-            var r = JSON.parse(new TextDecoder('utf-8').decode(text.value));
-            var translated = r.data.translations[0].translatedText;
-            return translated;
-        } catch (e) {
-            console.error(e);
-            return 'error';
+        if (response.body === null) {
+            throw Error("No response");
         }
+        const res = await response.body.getReader().read();
+        var r = JSON.parse(new TextDecoder('utf-8').decode(res.value));
+        var translated = r.data.translations[0].translatedText;
+        return translated;
 };
 
 
@@ -37,6 +35,8 @@ const translateAsync = async (url: string, text: string, from: string, to: strin
 export class Translation {
     public toTranslate = '';
     public apiKey = '';
+    public firstLanguage = 'de';
+    public finalLanguage = 'de';
 
     LANGUAGES = [
         'af',
@@ -156,16 +156,22 @@ export class Translation {
             .replace(/\r?\n/g, '\n')
             .split('\n\n');
 
-        const promises = toTranslate.map((t) => this.translateAsync(t));
+        const promises = toTranslate.map(async (t) => {
+            try {
+                return await this.translateAsync(t)
+            } catch (e) {
+                return e.toString();
+            }
+        });
         const results = Promise.all(promises);
         return results;
     }
 
     private async translateAsync(block: string) {
         const selectedLanguages = 
-            ['de'].concat(
+            [this.firstLanguage].concat(
                 this.selectRandomLanguages(20),
-                [ 'de' ]
+                [ this.finalLanguage ]
             );
         console.log("translation sequence", selectedLanguages);
         return this.translateNext(block, selectedLanguages);

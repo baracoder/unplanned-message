@@ -1,3 +1,13 @@
+# unplanned message
+
+Credits to [@sankroh91](https://github.com/sankroh91) for idea and first working version.
+Fun tool to translate messages using google cloud translate through multiple languages and back.
+
+1. Create a google cloud account an API key for the translation API (the first 500 000 characters are for free)
+2. Paste API key
+3. Paste some text you want to misunderstand
+4. Click translate
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).

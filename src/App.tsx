@@ -1,14 +1,25 @@
-import { totalmem } from 'os';
-import React, { useState } from 'react';
+import React, { FormEvent, useState } from 'react';
 import { Translation } from './translation';
+import { Button, TextField, Container, Backdrop, CircularProgress, Card, CardContent, Typography, Grid } from '@material-ui/core';
 
 function App() {
   // states
-  const [apiKey, changeApiKey ] = useState<string>("");
+  const [apiKey, changeApiKey ] = useState<string>('');
   const [ translated, changeTranslated ] = useState<string[]>([]);
-  const [toTranslate, changeToTranslate ] = useState<string>("Welcome to unplanned message!");
+  const [toTranslate, changeToTranslate ] = useState<string>('Welcome to unplanned message!');
+  const [ isWorking, changeWorking ] = useState(false);
+  const [ firstLanguage, changeFirstLanguage ] = useState('');
+  const [ finalLanguage, changeFinalLanguage ] = useState('de');
 
   // handlers
+  const updateFirstLanguage = (e: any) => {
+      changeFirstLanguage(e.target.value);
+  };
+
+  const updateFinalLanguage = (e: any) => {
+      changeFinalLanguage(e.target.value);
+  };
+
   const updateToTranslate = (e: any) => {
       changeToTranslate(e.target.value);
   };
@@ -17,31 +28,67 @@ function App() {
       changeApiKey(e.target.value);
   };
 
-  const startTranslation = () => {
+  const startTranslation = (e: FormEvent<HTMLFormElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    changeWorking(true);
     const t = new Translation();
     t.apiKey = apiKey;
     t.toTranslate = toTranslate;
+    t.firstLanguage = firstLanguage;
+    t.finalLanguage = finalLanguage;
     t.startTranslation().then((r) => {
       changeTranslated(r);
+    }).finally(() => {
+      changeWorking(false);
     });
     
   };
 
 
   return (
-    <React.Fragment>
-      <div style={ {textAlign:'center' } }>
-        <h1>Welcome to unplanned message!</h1>
-      </div>
-      <div>
-        <div>API key: <input type="text" value={apiKey} onChange={updateApiKey}/></div>
-        <textarea wrap="hard" onChange={updateToTranslate} rows={20} cols={120}>{ toTranslate }</textarea>
-        <div>Characters: { toTranslate.length }</div>
+    <Container maxWidth="md">
+      <Card>
+        <CardContent>
+          <form onSubmit={startTranslation}>
+            <div style={ {textAlign:'center' } }>
+              <Typography variant="h2">Welcome to unplanned message!</Typography>
+            </div>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+              <TextField id="apikey" label="API key" value={apiKey} onChange={updateApiKey} variant="outlined"/>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField id="text" label="Text to translate" multiline onChange={updateToTranslate} value={toTranslate} rows={8} variant="outlined" style={{ width: '100%'}}/>
+              </Grid>
+              <Typography>Characters: { toTranslate.length }</Typography>
 
-        <button onClick={() => startTranslation()}>Translate</button>
-        <div>{ translated.map((t, i) => <p key={i}>{ t } </p>) }</div>
-      </div>
-    </React.Fragment>
+              <Grid item xs={12}>
+                <TextField id="firstLanguage" label="Source language code (optional)" value={firstLanguage} onChange={updateFirstLanguage} variant="outlined"/>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField id="finalLanguage" label="Target language code" value={finalLanguage} onChange={updateFinalLanguage} variant="outlined"/>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Button type="submit" variant="contained" color="primary">Translate</Button>
+              </Grid>
+              { translated.length > 0 &&
+                <Grid item xs={12}>
+                  <Typography variant="h2">Translation</Typography>
+                  { translated.map((t, i) => <Typography key={i} style={{marginBottom: '1.2em'}}>{ t }</Typography>) }
+                </Grid>
+              
+              }
+            </Grid>
+          </form>
+        </CardContent>
+      </Card>
+      <Backdrop open={isWorking} style={{zIndex: 100}}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
+    </Container>
   );
 }
 
