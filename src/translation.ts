@@ -159,6 +159,7 @@ export class Translation {
             try {
                 return await this.translateAsync(t)
             } catch (e) {
+                console.error(e);
                 return e.toString();
             }
         });
