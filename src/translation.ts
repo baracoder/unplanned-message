@@ -24,8 +24,7 @@ const translateAsync = async (url: string, text: string, from: string, to: strin
         if (response.body === null) {
             throw Error("No response");
         }
-        const res = await response.body.getReader().read();
-        var r = JSON.parse(new TextDecoder('utf-8').decode(res.value));
+        const r = await response.json();
         var translated = r.data.translations[0].translatedText;
         return translated;
 };
