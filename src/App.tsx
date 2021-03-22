@@ -1,6 +1,6 @@
 import React, { FormEvent, useState } from 'react';
 import { Translation } from './translation';
-import { Button, TextField, Container, Backdrop, CircularProgress, Card, CardContent, Typography, Grid } from '@material-ui/core';
+import { Button, TextField, Container, Backdrop, CircularProgress, Card, CardContent, Typography, Grid, Slider } from '@material-ui/core';
 
 function App() {
   // states
@@ -10,8 +10,15 @@ function App() {
   const [ isWorking, changeWorking ] = useState(false);
   const [ firstLanguage, changeFirstLanguage ] = useState('');
   const [ finalLanguage, changeFinalLanguage ] = useState('de');
+  const [ iterations, changeIterations ] = useState(20);
 
   // handlers
+  const updateIterations = (e: any, n: number | number[]) => {
+    if (typeof n === "number") {
+      changeIterations(n);
+    }
+  };
+
   const updateFirstLanguage = (e: any) => {
       changeFirstLanguage(e.target.value);
   };
@@ -38,6 +45,7 @@ function App() {
     t.toTranslate = toTranslate;
     t.firstLanguage = firstLanguage;
     t.finalLanguage = finalLanguage;
+    t.iterations = iterations;
     t.startTranslation().then((r) => {
       changeTranslated(r);
     }).finally(() => {
@@ -69,6 +77,13 @@ function App() {
               </Grid>
               <Grid item xs={12}>
                 <TextField id="finalLanguage" label="Target language code" value={finalLanguage} onChange={updateFinalLanguage} variant="outlined"/>
+              </Grid>
+              <Grid item xs={12}>
+              <Typography gutterBottom>
+                Translation iterations
+              </Typography>
+                <Slider valueLabelDisplay="on" 
+                  step={1} marks min={1} max={30} value={iterations} onChange={updateIterations} />
               </Grid>
 
               <Grid item xs={12}>

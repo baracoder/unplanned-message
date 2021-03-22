@@ -36,6 +36,7 @@ export class Translation {
     public apiKey = '';
     public firstLanguage = 'de';
     public finalLanguage = 'de';
+    public iterations = 20;
 
     LANGUAGES = [
         'af',
@@ -170,9 +171,8 @@ export class Translation {
     private async translateAsync(block: string) {
         const selectedLanguages = 
             [this.firstLanguage].concat(
-                this.selectRandomLanguages(20),
-                [ this.finalLanguage ]
-            );
+                this.selectRandomLanguages(this.iterations),
+                [ this.finalLanguage ]));
         console.log("translation sequence", selectedLanguages);
         return this.translateNext(block, selectedLanguages);
     }
