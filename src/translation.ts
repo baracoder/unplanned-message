@@ -13,7 +13,7 @@ const deduplicateConsecutive = <T>(l: T[]): T[] => {
     return copy.filter((it, pos, ar) => pos === 0 || it !== ar[pos-1]);
 };
 
-const translateAsync = async (url: string, text: string, from: string, to: string) => {
+const callTranslateApi = async (url: string, text: string, from: string, to: string) => {
         const data :any = {
             target: to,
             q: text,
@@ -34,16 +34,14 @@ const translateAsync = async (url: string, text: string, from: string, to: strin
         return translated;
 };
 
+export interface TranslationOptions {
+    apiKey: string
+    firstLanguage: string
+    finalLanguage: string
+    iterations: number
+};
 
-
-export class Translation {
-    public toTranslate = '';
-    public apiKey = '';
-    public firstLanguage = 'de';
-    public finalLanguage = 'de';
-    public iterations = 20;
-
-    LANGUAGES = [
+const LANGUAGES = [
         'af',
         'sq',
         'am',
@@ -146,46 +144,35 @@ export class Translation {
         'yi',
         'yo',
         'zu'
-    ];
+];
 
-    getUrl(apiKey: string) {
-        return 'https://translation.googleapis.com/language/translate/v2?key=' + apiKey;
-    }
+const getUrl = (apiKey: string) =>
+    'https://translation.googleapis.com/language/translate/v2?key=' + apiKey;
 
-    selectRandomLanguages(n: number): string[] {
-        return first(shuffle(this.LANGUAGES), n);
-    }
+const selectRandomLanguages = (n: number): string[] => first(shuffle(LANGUAGES), n);
 
-    async startTranslation() {
-        const toTranslate = this.toTranslate
-            .replace(/\r?\n/g, '\n')
-            .replace(/\n\n+/g, '\n\n')
-            .split('\n\n')
-            .filter(t => t.length > 0 && t.match(/\S+/g))
-            ;
+export const translate = async (toTranslateString: string, options: TranslationOptions) => {
+    const toTranslate = toTranslateString
+        .replace(/\r?\n/g, '\n')
+        .replace(/\n\n+/g, '\n\n')
+        .split('\n\n')
+        .filter(t => t.length > 0 && t.match(/\S+/g))
+        ;
 
-        const promises = toTranslate.map(async (t) => {
-            try {
-                return await this.translateAsync(t)
-            } catch (e) {
-                console.error(e);
-                return e.toString();
-            }
-        });
-        const results = Promise.all(promises);
-        return results;
-    }
+    const promises = toTranslate.map(async (t) => {
+        try {
+            return await translateBlockAsync(t, options)
+        } catch (e) {
+            console.error(e);
+            return e.toString();
+        }
+    });
+    const results = Promise.all(promises);
+    return results;
+};
 
-    private async translateAsync(block: string) {
-        const selectedLanguages = deduplicateConsecutive(
-            [this.firstLanguage].concat(
-                this.selectRandomLanguages(this.iterations),
-                [ this.finalLanguage ]));
-        console.log("translation sequence", selectedLanguages);
-        return this.translateNext(block, selectedLanguages);
-    }
-
-    private async translateNext(message: string, languages: string[]): Promise<string> {
+const translateBlockAsync = async (block: string, options: TranslationOptions) => {
+    const translateNext = async (message: string, languages: string[]): Promise<string> => {
         if (languages.length < 2) {
             return message;
         }
@@ -193,8 +180,16 @@ export class Translation {
         const from = languages.shift() || "";
         const to = languages[0];
 
-        var url = this.getUrl(this.apiKey);
-        const translatedMessage = await translateAsync(url, message, from, to);
-        return this.translateNext(translatedMessage, languages);
-    }
+        var url = getUrl(options.apiKey);
+        const translatedMessage = await callTranslateApi(url, message, from, to);
+        return translateNext(translatedMessage, languages);
+    };
+
+
+    const selectedLanguages = deduplicateConsecutive(
+        [options.firstLanguage].concat(
+            selectRandomLanguages(options.iterations),
+            [ options.finalLanguage ]));
+    console.log("translation sequence", selectedLanguages);
+    return translateNext(block, selectedLanguages);
 }

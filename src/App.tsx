@@ -1,5 +1,5 @@
 import React, { FormEvent, useState } from 'react';
-import { Translation } from './translation';
+import { TranslationOptions, translate } from './translation';
 import { Button, TextField, Container, Backdrop, CircularProgress, Card, CardContent, Typography, Grid, Slider } from '@material-ui/core';
 
 function App() {
@@ -40,13 +40,14 @@ function App() {
     e.preventDefault();
 
     changeWorking(true);
-    const t = new Translation();
-    t.apiKey = apiKey;
-    t.toTranslate = toTranslate;
-    t.firstLanguage = firstLanguage;
-    t.finalLanguage = finalLanguage;
-    t.iterations = iterations;
-    t.startTranslation().then((r) => {
+    const translationOptions: TranslationOptions = {
+      apiKey,
+      firstLanguage,
+      finalLanguage,
+      iterations
+    };
+
+    translate(toTranslate, translationOptions).then((r) => {
       changeTranslated(r);
     }).finally(() => {
       changeWorking(false);
