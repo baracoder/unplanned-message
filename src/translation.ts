@@ -8,6 +8,11 @@ const shuffle = <T>(l: T[]): T[] => {
     return copy.sort(x => Math.random() -0.5);
 };
 
+const deduplicateConsecutive = <T>(l: T[]): T[] => {
+    const copy = arrayCopy(l);
+    return copy.filter((it, pos, ar) => pos === 0 || it !== ar[pos-1]);
+};
+
 const translateAsync = async (url: string, text: string, from: string, to: string) => {
         const data :any = {
             target: to,
@@ -169,7 +174,7 @@ export class Translation {
     }
 
     private async translateAsync(block: string) {
-        const selectedLanguages = 
+        const selectedLanguages = deduplicateConsecutive(
             [this.firstLanguage].concat(
                 this.selectRandomLanguages(this.iterations),
                 [ this.finalLanguage ]));
