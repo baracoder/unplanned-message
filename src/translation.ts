@@ -159,7 +159,10 @@ export class Translation {
     async startTranslation() {
         const toTranslate = this.toTranslate
             .replace(/\r?\n/g, '\n')
-            .split('\n\n');
+            .replace(/\n\n+/g, '\n\n')
+            .split('\n\n')
+            .filter(t => t.length > 0 && t.match(/\S+/g))
+            ;
 
         const promises = toTranslate.map(async (t) => {
             try {
