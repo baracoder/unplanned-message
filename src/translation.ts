@@ -1,3 +1,5 @@
+import Bottleneck from "bottleneck";
+
 
 const arrayCopy = <T>(a: T[]): T[] => a.slice();
 const first = <T>(l: T[], n: number): T[] => l.slice(0, n);
@@ -167,7 +169,11 @@ export const translate = async (toTranslateString: string, options: TranslationO
             return e.toString();
         }
     });
-    const results = Promise.all(promises);
+    const limiter = new Bottleneck({
+        maxConcurrent: 1
+    });
+    const results = limiter.schedule(() => Promise.all(promises));
+    //const results = Promise.all(promises);
     return results;
 };
 
