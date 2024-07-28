@@ -1,11 +1,11 @@
 import React, { FormEvent, useState } from 'react';
-import { TranslationOptions, translate } from './translation';
+import { TranslationOptions, TranslationStep, translate, splitToParagraphs } from './translation';
 import { Button, TextField, Container, Backdrop, CircularProgress, Card, CardContent, Typography, Grid, Slider } from '@material-ui/core';
 
 function App() {
   // states
   const [apiKey, changeApiKey ] = useState<string>('');
-  const [ translated, changeTranslated ] = useState<string[]>([]);
+  const [ translated, changeTranslated ] = useState<TranslationStep[][]>([]);
   const [toTranslate, changeToTranslate ] = useState<string>('Welcome to unplanned message!');
   const [ isWorking, changeWorking ] = useState(false);
   const [ firstLanguage, changeFirstLanguage ] = useState('');
@@ -47,12 +47,41 @@ function App() {
       iterations
     };
 
-    translate(toTranslate, translationOptions).then((r) => {
+    const toTranslateParagraphs = splitToParagraphs(toTranslate);
+
+    translate(toTranslateParagraphs, translationOptions).then((r) => {
       changeTranslated(r);
     }).finally(() => {
       changeWorking(false);
     });
-    
+
+  };
+
+  const getLanguageChainString = (ts: TranslationStep[]) => {
+    return [ts[0].fromLanguage,
+            ...ts.map(x => x.toLanguage)
+            ].join(", ");
+  };
+
+  const copyToClipboard = () => {
+    var text = "";
+    for (const paragraphInfo of translated) {
+      const p = paragraphInfo[paragraphInfo.length-1].translated;
+      const languages = getLanguageChainString(paragraphInfo);
+      text += `<p>${p} <sub>(${languages})</sub></p>\n`;
+    }
+    // copy to cliboard as html
+    const data = [
+      new ClipboardItem({
+        "text/html": new Blob([text], { type: "text/html" })
+      })
+    ];
+    navigator.clipboard.write(data).then(() => {
+      console.log('copied');
+    }).catch((e:any) => {
+      console.error('error', e);
+    });
+
   };
 
 
@@ -83,7 +112,7 @@ function App() {
               <Typography gutterBottom>
                 Translation iterations
               </Typography>
-                <Slider valueLabelDisplay="on" 
+                <Slider valueLabelDisplay="on"
                   step={1} marks min={1} max={30} value={iterations} onChange={updateIterations} />
               </Grid>
 
@@ -93,10 +122,18 @@ function App() {
               { translated.length > 0 &&
                 <Grid item xs={12}>
                   <Typography variant="h2">Translation</Typography>
-                  { translated.map((t, i) => <Typography key={i} style={{marginBottom: '1.2em'}}>{ t }</Typography>) }
+                  { translated.map((t, i) => <>
+                      <Typography key={i} style={{marginBottom: '1.2em'}}>{ t[t.length-1].translated }
+                        <br/>
+                        <sub>({getLanguageChainString(t)})</sub>
+                      </Typography>
+                    </>) }
                 </Grid>
-              
+
               }
+            </Grid>
+            <Grid item xs={12}>
+              <Button type="button" variant="contained" onClick={e => copyToClipboard()}>Copy to clipboard</Button>
             </Grid>
           </form>
         </CardContent>

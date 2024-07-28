@@ -43,6 +43,13 @@ export interface TranslationOptions {
     iterations: number
 };
 
+export interface TranslationStep {
+  original: string
+  translated: string
+  fromLanguage: string
+  toLanguage: string
+}
+
 const LANGUAGES = [
         'af',
         'sq',
@@ -153,18 +160,18 @@ const getUrl = (apiKey: string) =>
 
 const selectRandomLanguages = (n: number): string[] => first(shuffle(LANGUAGES), n);
 
-export const translate = async (toTranslateString: string, options: TranslationOptions) => {
-    const toTranslate = toTranslateString
-        .replace(/\r?\n/g, '\n')
-        .replace(/\n\n+/g, '\n\n')
-        .split('\n\n')
-        .filter(t => t.length > 0 && t.match(/\S+/g))
-        ;
+export const splitToParagraphs = (text: string): string[] =>
+  text
+    .replace(/\r?\n/g, '\n')
+    .replace(/\n\n+/g, '\n\n')
+    .split('\n\n')
+    .filter(t => t.length > 0 && t.match(/\S+/g));
 
-    const promises = toTranslate.map(async (t) => {
+export const translate = async (toTranslateStrings: string[], options: TranslationOptions) : Promise<TranslationStep[][]> => {
+    const promises = toTranslateStrings.map(async (t) => {
         try {
             return await translateBlockAsync(t, options)
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
             return e.toString();
         }
@@ -178,24 +185,25 @@ export const translate = async (toTranslateString: string, options: TranslationO
 };
 
 const translateBlockAsync = async (block: string, options: TranslationOptions) => {
-    const translateNext = async (message: string, languages: string[]): Promise<string> => {
-        if (languages.length < 2) {
-            return message;
-        }
-
-        const from = languages.shift() || "";
-        const to = languages[0];
-
-        var url = getUrl(options.apiKey);
-        const translatedMessage = await callTranslateApi(url, message, from, to);
-        return translateNext(translatedMessage, languages);
-    };
-
-
-    const selectedLanguages = deduplicateConsecutive(
-        [options.firstLanguage].concat(
-            selectRandomLanguages(options.iterations),
-            [ options.finalLanguage ]));
+    const selectedLanguages = selectRandomLanguages(options.iterations);
     console.log("translation sequence", selectedLanguages);
-    return translateNext(block, selectedLanguages);
-}
+
+    const fromLangs = deduplicateConsecutive([options.firstLanguage].concat(selectedLanguages));
+    const toLangs = deduplicateConsecutive(selectedLanguages.concat([options.finalLanguage]));
+    const zip = (a: string[], b: string[]) => a.map((e, i) => [e, b[i]]);
+    const url = getUrl(options.apiKey);
+
+    const translations: TranslationStep[] = [];
+    var originalText = block;
+    for (const [from, to] of zip(fromLangs, toLangs)) {
+        const translatedText = await callTranslateApi(url, originalText, from, to);
+        translations.push({
+            original: originalText,
+            translated: translatedText,
+            fromLanguage: from || "auto",
+            toLanguage: to
+        });
+        originalText = translatedText;
+    }
+    return translations;
+};
